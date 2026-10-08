@@ -1,20 +1,23 @@
 name: Force Shield Icon
 on: workflow_dispatch
+permissions:
+  contents: write
 jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Recreate res + shield
+      - name: Recreate res with shield
         run: |
           pip install pillow -q
           python3 << 'PY'
           from PIL import Image, ImageDraw
           import os, shutil
           def make_icon(size):
-              img = Image.new("RGBA", (size, size), (0,0,0,0))
+              img = Image.new("RGBA", (size,size), (0,0,0,0))
               draw = ImageDraw.Draw(img)
-              draw.rounded_rectangle([0,0,size,size], radius=size//8, fill=(25,118,210))
+              r=size//8
+              draw.rounded_rectangle([0,0,size,size], radius=r, fill=(25,118,210))
               pad=size//5; cx=size//2; top=pad; bot=size-pad//2; left=pad; right=size-pad
               pts=[(cx,top),(right,top+size//8),(right,size*2//3),(cx,bot),(left,size*2//3),(left,top+size//8)]
               draw.polygon(pts, fill=(255,255,255))
@@ -26,19 +29,18 @@ jobs:
               return img
           base="app/src/main/res"
           os.makedirs(base, exist_ok=True)
-          for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33", f"{base}/drawable-v24"]:
+          for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
               if os.path.exists(p): shutil.rmtree(p)
-          for f in [f"{base}/drawable/ic_launcher_background.xml", f"{base}/drawable/ic_launcher_foreground.xml"]:
-              if os.path.exists(f): os.remove(f)
           for d,sz in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
               os.makedirs(f"{base}/mipmap-{d}", exist_ok=True)
               make_icon(sz).save(f"{base}/mipmap-{d}/ic_launcher.png")
               make_icon(sz).save(f"{base}/mipmap-{d}/ic_launcher_round.png")
+          print("shield recreated")
           PY
       - name: Commit
         run: |
           git config user.name "bot"
           git config user.email "bot@bot.com"
           git add -A
-          git commit -m "recreate res shield" || exit 0
+          git commit -m "recreate shield" || exit 0
           git push
