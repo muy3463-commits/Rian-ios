@@ -49,78 +49,87 @@ fun App() {
     var isLogin by remember { mutableStateOf(false) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var viewingFile by remember { mutableStateOf<File?>(null) }
-    val vaultDir = File(context.filesDir, "vault").apply { if(!exists()) mkdirs() }
+    val vaultDir = File(context.filesDir, "vault")
+    if (!vaultDir.exists()) vaultDir.mkdirs()
     var refresh by remember { mutableStateOf(0) }
 
     fun exportFile(f: File) {
         try {
             val ext = f.extension.lowercase()
-            val mime = when(ext){ "jpg","jpeg"->"image/jpeg" "png"->"image/png" "mp4"->"video/mp4" "pdf"->"application/pdf" else->"application/octet-stream" }
-            val collection = when(ext){ "jpg","jpeg","png"->MediaStore.Images.Media.EXTERNAL_CONTENT_URI "mp4","mkv","mov"->MediaStore.Video.Media.EXTERNAL_CONTENT_URI else->MediaStore.Downloads.EXTERNAL_CONTENT_URI }
-            val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
-                put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, when(ext){ "jpg","jpeg","png"->Environment.DIRECTORY_PICTURES+"/RianDokumen" "mp4"->Environment.DIRECTORY_MOVIES+"/RianDokumen" else->Environment.DIRECTORY_DOWNLOADS+"/RianDokumen" })
-            }
-            context.contentResolver.insert(collection, values)?.let { uri ->
+            val mime = if (ext == "jpg" || ext == "jpeg") "image/jpeg" else if (ext == "png") "image/png" else if (ext == "mp4") "video/mp4" else "application/octet-stream"
+            val collection = if (ext == "jpg" || ext == "jpeg" || ext == "png") MediaStore.Images.Media.EXTERNAL_CONTENT_URI else if (ext == "mp4") MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            val path = if (ext == "jpg" || ext == "jpeg" || ext == "png") Environment.DIRECTORY_PICTURES + "/RianDokumen" else if (ext == "mp4") Environment.DIRECTORY_MOVIES + "/RianDokumen" else Environment.DIRECTORY_DOWNLOADS + "/RianDokumen"
+            val values = ContentValues()
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
+            values.put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, path)
+            val uri = context.contentResolver.insert(collection, values)
+            if (uri != null) {
                 context.contentResolver.openOutputStream(uri)?.use { out -> f.inputStream().use { inp -> inp.copyTo(out) } }
-                Toast.makeText(context, "✅ Export Berhasil!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Export Berhasil!", Toast.LENGTH_SHORT).show()
             }
-        } catch(e: Exception){ Toast.makeText(context, "Gagal: ${e.message}", Toast.LENGTH_LONG).show() }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Gagal: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if(uri!=null && selectedFolder!=null){
-            val folder = File(vaultDir, selectedFolder!!).apply{ if(!exists()) mkdirs() }
-            val ext = when(selectedFolder){ "Photos"->"jpg" "Videos"->"mp4" "Pdf"->"pdf" else->"docx" }
-            val dest = File(folder, "${selectedFolder}_${System.currentTimeMillis()}.$ext")
-            context.contentResolver.openInputStream(uri)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } }
+        if (uri != null && selectedFolder != null) {
+            val folder = File(vaultDir, selectedFolder!!)
+            if (!folder.exists()) folder.mkdirs()
+            var ext = "docx"
+            if (selectedFolder == "Photos") ext = "jpg"
+            if (selectedFolder == "Videos") ext = "mp4"
+            if (selectedFolder == "Pdf") ext = "pdf"
+            val dest = File(folder, selectedFolder + "_" + System.currentTimeMillis() + "." + ext)
+            context.contentResolver.openInputStream(uri)?.use { input -> dest.outputStream().use { output -> input.copyTo(output) } }
             refresh++
         }
     }
 
-    if(viewingFile!=null){
-        Box(Modifier.fillMaxSize().background(Color.Black)){
+    if (viewingFile != null) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             val file = viewingFile!!
-            if(file.extension.lowercase() in listOf("jpg","jpeg","png","webp")){
-                val bmp = remember(file){ BitmapFactory.decodeFile(file.absolutePath) }
-                bmp?.let{ Image(bitmap = it.asImageBitmap(), contentDescription=null, modifier=Modifier.fillMaxSize()) }
+            val isImage = file.extension.lowercase() == "jpg" || file.extension.lowercase() == "jpeg" || file.extension.lowercase() == "png"
+            if (isImage) {
+                val bmp = remember(file) { BitmapFactory.decodeFile(file.absolutePath) }
+                if (bmp != null) {
+                    Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize())
+                }
             } else {
-                AndroidView(factory={ VideoView(it).apply{ setVideoURI(Uri.fromFile(file)); setOnPreparedListener{mp-> mp.isLooping=true; start()} } }, modifier=Modifier.fillMaxSize())
+                AndroidView(factory = { ctx -> VideoView(ctx).apply { setVideoURI(Uri.fromFile(file)); setOnPreparedListener { it.isLooping = true; start() } } }, modifier = Modifier.fillMaxSize())
             }
-            FilledTonalButton(onClick={viewingFile=null}, modifier=Modifier.align(Alignment.TopStart).padding(16.dp)){ Text("✕ Tutup") }
+            Button(onClick = { viewingFile = null }, modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) { Text("X Tutup") }
         }
         return
     }
 
-    if(!isLogin){
-        Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement=Arrangement.Center, horizontalAlignment=Alignment.CenterHorizontally){
-            Card(shape=RoundedCornerShape(24.dp), colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer), modifier=Modifier.fillMaxWidth()){
-                Column(Modifier.padding(24.dp), horizontalAlignment=Alignment.CenterHorizontally){
-                    Text("🔐", style=MaterialTheme.typography.displayMedium)
-                    Text("Rian Dokumen", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold)
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedTextField(value=pinInput, onValueChange={pinInput=it}, label={Text("PIN")}, modifier=Modifier.fillMaxWidth(), shape=RoundedCornerShape(12.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Button(onClick={if(pinInput=="123456") isLogin=true}, modifier=Modifier.fillMaxWidth(), shape=RoundedCornerShape(12.dp)){ Text("Masuk") }
+    if (!isLogin) {
+        Column(modifier = Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Rian Dokumen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(value = pinInput, onValueChange = { pinInput = it }, label = { Text("PIN 123456") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { if (pinInput == "123456") isLogin = true }, modifier = Modifier.fillMaxWidth()) { Text("Masuk") }
                 }
             }
         }
         return
     }
 
-    if(selectedFolder==null){
-        Column(Modifier.fillMaxSize().padding(16.dp)){
-            Text("Vault Kamu", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
-            val folders = listOf(Triple("Docx","📄","Docx"), Triple("Pdf","📕","PDF"), Triple("Photos","🖼️","Foto"), Triple("Videos","🎬","Video"))
-            LazyVerticalGrid(columns=GridCells.Fixed(2)){
-                items(folders){ (id,icon,label) ->
-                    Card(modifier=Modifier.padding(8.dp).clickable{selectedFolder=id}, shape=RoundedCornerShape(20.dp), elevation=CardDefaults.cardElevation(4.dp)){
-                        Column(Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment=Alignment.CenterHorizontally){
-                            Text(icon, style=MaterialTheme.typography.displaySmall)
-                            Spacer(Modifier.height(8.dp))
-                            Text(label, fontWeight=FontWeight.SemiBold)
+    if (selectedFolder == null) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Text("Vault Kamu", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyVerticalGrid(columns = GridCells.Fixed(2)) {
+                items(listOf("Docx", "Pdf", "Photos", "Videos")) { name ->
+                    Card(modifier = Modifier.padding(8.dp).clickable { selectedFolder = name }, shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+                        Column(modifier = Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(if (name == "Photos") "🖼️" else if (name == "Videos") "🎬" else if (name == "Pdf") "📕" else "📄", style = MaterialTheme.typography.displaySmall)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(name, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -128,46 +137,14 @@ fun App() {
         }
     } else {
         val folder = File(vaultDir, selectedFolder!!)
-        val files = remember(refresh, selectedFolder){ folder.listFiles()?.toList()?: emptyList() }
-        Column(Modifier.fillMaxSize().padding(16.dp)){
-            Row(verticalAlignment=Alignment.CenterVertically){
-                FilledTonalButton(onClick={selectedFolder=null}, shape=RoundedCornerShape(12.dp)){ Text("←") }
-                Spacer(Modifier.width(12.dp))
-                Text(selectedFolder!!, style=MaterialTheme.typography.titleLarge, fontWeight=FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                Text("${files.size} file", style=MaterialTheme.typography.bodySmall)
+        val files = remember(refresh, selectedFolder) { folder.listFiles()?.toList() ?: emptyList() }
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { selectedFolder = null }) { Text("<") }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(selectedFolder!!, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.weight(1f))
+                Text(files.size.toString() + " file", style = MaterialTheme.typography.bodySmall)
             }
-            Spacer(Modifier.height(16.dp))
-            Button(onClick={picker.launch("*/*")}, modifier=Modifier.fillMaxWidth(), shape=RoundedCornerShape(12.dp)){ Text("＋ Tambah File") }
-            Spacer(Modifier.height(16.dp))
-            LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
-                items(files){ f ->
-                    ElevatedCard(shape=RoundedCornerShape(16.dp), modifier=Modifier.fillMaxWidth()){
-                        Column(Modifier.padding(14.dp)){
-                            Row(verticalAlignment=Alignment.CenterVertically){
-                                Text(when(f.extension.lowercase()){ "jpg","jpeg","png"->"🖼️" "mp4","mkv"->"🎬" "pdf"->"📕" else->"📄" }, modifier=Modifier.padding(end=8.dp))
-                                Column(Modifier.weight(1f)){
-                                    Text(f.name, fontWeight=FontWeight.Medium, maxLines=1)
-                                    Text("${f.length()/1024} KB", style=MaterialTheme.typography.bodySmall, color=Color.Gray)
-                                }
-                            }
-                            Spacer(Modifier.height(10.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                                FilledButton(onClick={
-                                    if(f.extension.lowercase() in listOf("jpg","jpeg","png","webp","mp4","mkv","mov")) viewingFile=f
-                                    else{
-                                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", f)
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply{ setDataAndType(uri,"*/*"); addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                                        context.startActivity(android.content.Intent.createChooser(intent,"Buka"))
-                                    }
-                                }, modifier=Modifier.weight(1f), shape=RoundedCornerShape(10.dp)){ Text("👁️ Buka") }
-                                FilledTonalButton(onClick={exportFile(f)}, modifier=Modifier.weight(1f), shape=RoundedCornerShape(10.dp)){ Text("⬇️ Export") }
-                                OutlinedButton(onClick={f.delete(); refresh++}, modifier=Modifier.weight(1f), shape=RoundedCornerShape(10.dp), colors=ButtonDefaults.outlinedButtonColors(contentColor=Color.Red)){ Text("🗑️") }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { picker.launch("*/*") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
