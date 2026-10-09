@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +55,7 @@ fun App() {
             cv.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
             cv.put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
             val uri = ctx.contentResolver.insert(coll, cv)
-            uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> f.inputStream().use { i -> i.copyTo(o) } }; Toast.makeText(ctx, "Export OK", Toast.LENGTH_SHORT).show() }
+            uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> f.inputStream().use { i -> i.copyTo(o) } }; Toast.makeText(ctx, "Export OK ke " + rel, Toast.LENGTH_SHORT).show() }
         } catch (e: Exception) { Toast.makeText(ctx, e.message, Toast.LENGTH_LONG).show() }
     }
 
@@ -69,21 +70,36 @@ fun App() {
     }
 
     if (!login) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-            OutlinedTextField(value = pin, onValueChange = { pin = it }, label = { Text("PIN 123456") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(10.dp))
-            Button(onClick = { if (pin == "123456") login = true }, modifier = Modifier.fillMaxWidth()) { Text("Masuk") }
+        Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Card(shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(8.dp)) {
+                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Rian Dokumen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("Vault Aman", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    Spacer(Modifier.height(20.dp))
+                    OutlinedTextField(value = pin, onValueChange = { pin = it }, label = { Text("PIN 123456") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { if (pin == "123456") login = true else Toast.makeText(ctx, "PIN salah!", Toast.LENGTH_SHORT).show() }, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp)) { Text("Masuk", fontWeight = FontWeight.Bold) }
+                }
+            }
         }
         return
     }
 
     if (folder == null) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Text("Vault", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
-            LazyVerticalGrid(columns = GridCells.Fixed(2)) {
+            Text("Vault Kamu", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("Pilih folder", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Spacer(Modifier.height(16.dp))
+            LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(listOf("Docx", "Pdf", "Photos", "Videos")) { n ->
-                    Card(Modifier.padding(8.dp).clickable { folder = n }) { Box(Modifier.padding(24.dp).fillMaxWidth()) { Text(n, fontWeight = FontWeight.Bold) } }
+                    val icon = if (n == "Photos") "🖼️" else if (n == "Videos") "🎬" else if (n == "Pdf") "📕" else "📄"
+                    Card(Modifier.clickable { folder = n }, shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+                        Column(Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(icon, style = MaterialTheme.typography.headlineLarge)
+                            Spacer(Modifier.height(8.dp))
+                            Text(n, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
@@ -91,29 +107,29 @@ fun App() {
         val dir = File(vault, folder!!)
         val files = remember(refresh, folder) { dir.listFiles()?.toList() ?: emptyList() }
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row {
-                Button(onClick = { folder = null }) { Text("Back") }
-                Spacer(Modifier.width(8.dp))
-                Text(folder!!, modifier = Modifier.padding(top = 12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { folder = null }, shape = RoundedCornerShape(10.dp)) { Text("< Back") }
+                Spacer(Modifier.width(12.dp))
+                Column { Text(folder!!, fontWeight = FontWeight.Bold); Text(files.size.toString() + " file", style = MaterialTheme.typography.bodySmall) }
             }
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = { pick.launch("*/*") }, modifier = Modifier.fillMaxWidth()) { Text("+ Tambah") }
-            Spacer(Modifier.height(12.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = { pick.launch("*/*") }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)) { Text("+ Tambah File ke " + folder!!) }
+            Spacer(Modifier.height(16.dp))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(files) { f ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(10.dp)) {
-                            Text(f.name, maxLines = 1)
-                            Text("${f.length() / 1024} KB", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                            Spacer(Modifier.height(6.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ElevatedCard(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text(f.name, fontWeight = FontWeight.Medium, maxLines = 1)
+                            Text((f.length() / 1024).toString() + " KB", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            Spacer(Modifier.height(10.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = {
                                     val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".provider", f)
                                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply { setDataAndType(uri, "*/*"); addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
                                     ctx.startActivity(android.content.Intent.createChooser(intent, "Buka"))
-                                }, modifier = Modifier.weight(1f)) { Text("Buka") }
-                                Button(onClick = { exportFile(f) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))) { Text("Export") }
-                                OutlinedButton(onClick = { f.delete(); refresh++ }, modifier = Modifier.weight(1f)) { Text("Hapus") }
+                                }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) { Text("Buka") }
+                                Button(onClick = { exportFile(f) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))) { Text("Export") }
+                                OutlinedButton(onClick = { f.delete(); refresh++ }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) { Text("Hapus") }
                             }
                         }
                     }
