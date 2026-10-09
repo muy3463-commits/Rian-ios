@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: MAKE ICON FROM YOUR PHOTO
+      - name: MAKE ICON FROM PHOTO
         run: |
           pip install pillow -q
           python3 << 'PY'
@@ -13,30 +13,32 @@ jobs:
           import os, shutil
           src=None
           for n in ["icon.png","icon.webp","icon.jpg"]:
-              if os.path.exists(n):
-                  src=n
-                  break
-          if not src:
-              print("no icon"); exit(1)
-          print(f"Using {src}")
+            if os.path.exists(n):
+              src=n; break
+          print(f"icon: {src}")
           base="app/src/main/res"
           for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
-              if os.path.exists(p): shutil.rmtree(p)
+            if os.path.exists(p): shutil.rmtree(p)
           im=Image.open(src).convert("RGBA")
           for dn,sz in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
-              os.makedirs(f"{base}/mipmap-{dn}", exist_ok=True)
-              r=im.resize((sz,sz), Image.LANCZOS)
-              r.save(f"{base}/mipmap-{dn}/ic_launcher.png")
-              r.save(f"{base}/mipmap-{dn}/ic_launcher_round.png")
+            os.makedirs(f"{base}/mipmap-{dn}", exist_ok=True)
+            r=im.resize((sz,sz), Image.LANCZOS)
+            r.save(f"{base}/mipmap-{dn}/ic_launcher.png")
+            r.save(f"{base}/mipmap-{dn}/ic_launcher_round.png")
           PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v3
-      - name: Build Debug APK
+      - name: RESTORE GRADLEW IF MISSING
         run: |
-          if [ -f gradlew ]; then chmod +x gradlew && ./gradlew assembleDebug --no-daemon; else gradle assembleDebug --no-daemon; fi
+          if [ ! -f gradlew ]; then
+            echo "gradlew hilang, bikin baru..."
+            gradle wrapper --gradle-version 8.5
+          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-ios-debug
