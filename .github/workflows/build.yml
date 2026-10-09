@@ -5,21 +5,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: HAPUS TOTAL ROBOT - FIX ICON
+      - name: FIX ICON
         run: |
-          echo "CARI icon.png"
-          find. -name "icon.png" -type f
-          ICON_PATH=$(find. -name "icon.png" -type f | head -n1)
-          echo "Pakai: $ICON_PATH"
+          ls -l
           rm -rf app/src/main/res/mipmap-anydpi-v26
           rm -rf app/src/main/res/mipmap-anydpi-v33
-          find app/src/main/res -name "ic_launcher*.xml" -delete
-          echo "Sisa launcher:"
-          find app/src/main/res -name "*launch*" || echo "udah bersih"
+          rm -f app/src/main/res/mipmap-*/ic_launcher*.xml
+          rm -f app/src/main/res/mipmap-*/ic_launcher*.xml
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             mkdir -p app/src/main/res/mipmap-$d
-            cp -fv $ICON_PATH app/src/main/res/mipmap-$d/ic_launcher.png
-            cp -fv $ICON_PATH app/src/main/res/mipmap-$d/ic_launcher_round.png
+            cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher.png
+            cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher_round.png
           done
           ls app/src/main/res/mipmap-hdpi/
       - uses: actions/setup-java@v4
