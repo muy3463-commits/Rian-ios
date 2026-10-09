@@ -8,6 +8,7 @@ jobs:
       - name: Benerin folder & icon
         run: |
           mv Gradle gradle 2>/dev/null || true
+          rm -rf app/src/main/res/mipmap-anydpi-v26
           mkdir -p app/src/main/res/mipmap-mdpi
           mkdir -p app/src/main/res/mipmap-hdpi
           mkdir -p app/src/main/res/mipmap-xhdpi
