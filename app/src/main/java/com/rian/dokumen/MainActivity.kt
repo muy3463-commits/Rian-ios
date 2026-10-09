@@ -44,7 +44,7 @@ fun RianIOSApp(){
                         }
                     }}
                 }
-                Text("PIN: 123456", color=Color.Gray, fontSize=10.sp)
+            
             }
         } else {
             Column(Modifier.fillMaxSize().padding(24.dp)){
