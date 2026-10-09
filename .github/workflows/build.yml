@@ -5,13 +5,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: MAKE ICON
+      - name: MAKE ICON SHIELD BIRU
         run: |
           pip install pillow -q
           python3 << 'PY'
           from PIL import Image
           import os, shutil
           base="app/src/main/res"
+          # hapus adaptive icon lama yang bikin jadi robot kotak
           for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
             if os.path.exists(p): shutil.rmtree(p)
           im=Image.open("icon.png").convert("RGBA")
@@ -20,6 +21,12 @@ jobs:
             r=im.resize((sz,sz), Image.LANCZOS)
             r.save(f"{base}/mipmap-{dn}/ic_launcher.png")
             r.save(f"{base}/mipmap-{dn}/ic_launcher_round.png")
+            r.save(f"{base}/mipmap-{dn}/ic_launcher_foreground.png")
+          # bikin adaptive icon baru yang nunjuk ke PNG lu
+          for folder in ["mipmap-anydpi-v26","mipmap-anydpi-v33"]:
+            os.makedirs(f"{base}/{folder}", exist_ok=True)
+            open(f"{base}/{folder}/ic_launcher.xml","w").write('<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="#0a0f1e"/><foreground android:drawable="@mipmap/ic_launcher_foreground"/></adaptive-icon>')
+            open(f"{base}/{folder}/ic_launcher_round.xml","w").write('<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="#0a0f1e"/><foreground android:drawable="@mipmap/ic_launcher_foreground"/></adaptive-icon>')
           PY
       - uses: actions/setup-java@v4
         with:
@@ -28,15 +35,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
-      - name: Build APK - bikin gradlew kalo ilang
+      - name: Build APK
         run: |
-          if [ ! -f gradlew ]; then
-            echo "gradlew ilang, bikin baru pake gradle 8.5..."
-            gradle wrapper --gradle-version 8.5
-          fi
+          if [ ! -f gradlew ]; then gradle wrapper --gradle-version 8.5; fi
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew clean assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: Rian-ios-debug
+          name: Rian-ios-debug-SHIELD
           path: app/build/outputs/apk/debug/app-debug.apk
