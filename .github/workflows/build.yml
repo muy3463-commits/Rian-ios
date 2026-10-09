@@ -14,13 +14,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: |
+          mv Gradle gradle 2>/dev/null || true
           ls -la
-          find. -type f -name gradlew | head -5
-          GW=$(find. -type f -name gradlew | head -1)
-          echo "Gradlew ketemu di: $GW"
-          if [ -z "$GW" ]; then echo "WADUH GRADLEW ILANG!"; ls -R | head -50; exit 1; fi
-          cp -f "$GW"./gradlew
-          chmod +x./gradlew
+          find . -type f -name gradlew | head -10
+          GW=$(find . -type f -name gradlew | head -1)
+          echo "Ketemu $GW"
+          chmod +x $GW
+          cp -f $GW ./gradlew
+          chmod +x ./gradlew
           ./gradlew clean assembleDebug
       - uses: actions/upload-artifact@v4
         with:
