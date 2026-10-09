@@ -1,25 +1,25 @@
 name: Build APK
 on: [push]
-permissions:
-  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix icon
+      - name: Fix icon & folder
         run: |
-          rm -rf app/src/main/res/mipmap-anydpi-v26
           mv Gradle gradle 2>/dev/null || true
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p app/src/main/res/mipmap-$d; cp icon.png app/src/main/res/mipmap-$d/ic_launcher.png 2>/dev/null || cp icon.jpg app/src/main/res/mipmap-$d/ic_launcher.png; cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher_round.png; done
+          rm -rf app/src/main/res/mipmap-anydpi-v26
+          mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
+          cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || cp icon.jpg app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+          for d in hdpi xhdpi xxhdpi xxxhdpi; do cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher.png; cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher_round.png; done
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - run: chmod +x gradlew &&./gradlew assembleDebug --no-daemon
-      - name: Buat Release
-        uses: softprops/action-gh-release@v1
+      - run: chmod +x gradlew
+      - run:./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
         with:
-          tag_name: rian-apk-${{ github.run_number }}
-          name: Rian APK 14MB - Build ${{ github.run_number }}
-          files: app/build/outputs/apk/debug/app-debug.apk
+          name: Rian-APK-FINAL
+          path: app/build/outputs/apk/debug/app-debug.apk
