@@ -5,9 +5,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rm -rf app/src/main/res/mipmap-anydpi-v26
-      - run: rm -f app/src/main/res/mipmap-*/ic_launcher*.xml
-      - run: for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p app/src/main/res/mipmap-$d; cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher.png; cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher_round.png; done
+      - name: Fix icon - hapus robot dan pakai icon.png
+        run: |
+          rm -rf app/src/main/res/mipmap-anydpi-v26
+          rm -f app/src/main/res/mipmap-*/ic_launcher.xml
+          rm -f app/src/main/res/mipmap-*/ic_launcher_round.xml
+          rm -f app/src/main/res/mipmap-*/ic_launcher_foreground.xml
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p app/src/main/res/mipmap-$d
+            cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher.png
+            cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher_round.png
+          done
+          ls -l app/src/main/res/mipmap-hdpi/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -18,5 +27,5 @@ jobs:
       - run: gradle clean assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Rian-APK-FINAL
+          name: Rian-APK-FINAL-ICON-BENER
           path: app/build/outputs/apk/debug/app-debug.apk
