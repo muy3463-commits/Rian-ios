@@ -5,29 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Convert icon.png to launcher
+      - name: Pasang icon shield
         run: |
           pip install pillow -q
-          python3 -c "
-          from PIL import Image
-          import os, shutil
-          base='app/src/main/res'
-          # hapus adaptive icon yang bikin error
-          for p in [base+'/mipmap-anydpi-v26', base+'/mipmap-anydpi-v33']:
-              if os.path.exists(p):
-                  shutil.rmtree(p)
-          if not os.path.exists('icon.png'):
-              print('icon.png not found')
-              exit(0)
-          im=Image.open('icon.png').convert('RGBA')
-          for dn,sz in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
-              d=os.path.join(base,f'mipmap-{dn}')
-              os.makedirs(d, exist_ok=True)
-              r=im.resize((sz,sz), Image.LANCZOS)
-              r.save(os.path.join(d,'ic_launcher.png'))
-              r.save(os.path.join(d,'ic_launcher_round.png'))
-          print('icon done')
-          "
+          python3 -c "from PIL import Image;import os,shutil; b='app/src/main/res'; [shutil.rmtree(os.path.join(b,d)) for d in ['mipmap-anydpi-v26','mipmap-anydpi-v33'] if os.path.exists(os.path.join(b,d))]; im=Image.open('icon.png').convert('RGBA'); [(__import__('os').makedirs(os.path.join(b,f'mipmap-{k}'),exist_ok=True), Image.open('icon.png').convert('RGBA').resize((s,s),Image.LANCZOS).save(os.path.join(b,f'mipmap-{k}','ic_launcher.png')), Image.open('icon.png').convert('RGBA').resize((s,s),Image.LANCZOS).save(os.path.join(b,f'mipmap-{k}','ic_launcher_round.png'))) for k,s in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]]"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -35,12 +16,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
-      - name: Build APK
+      - name: Build
         run: |
           if [ ! -f gradlew ]; then gradle wrapper --gradle-version 8.5; fi
           chmod +x gradlew
-          ./gradlew clean assembleDebug --no-daemon
+          ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Rian-ios-debug
+          name: Rian-Dokumen-SHIELD-FINAL
           path: app/build/outputs/apk/debug/app-debug.apk
