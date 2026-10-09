@@ -5,23 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: RESTORE GRADLEW
-        run: |
-          for c in $(git log --all --pretty=format:%H -- gradlew | head -5); do git checkout $c -- gradlew gradle/wrapper/ 2>/dev/null && break; done
-          chmod +x gradlew || true
-      - name: MAKE ICON RIAN APK
+      - name: MAKE ICON
         run: |
           pip install pillow -q
           python3 << 'PY'
           from PIL import Image
           import os, shutil
-          src="icon.png"
           base="app/src/main/res"
           for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
             if os.path.exists(p): shutil.rmtree(p)
-          im=Image.open(src).convert("RGBA")
+          im=Image.open("icon.png").convert("RGBA")
           for dn,sz in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
             os.makedirs(f"{base}/mipmap-{dn}", exist_ok=True)
             r=im.resize((sz,sz), Image.LANCZOS)
@@ -35,8 +28,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
-      - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Build APK - bikin gradlew kalo ilang
+        run: |
+          if [ ! -f gradlew ]; then
+            echo "gradlew ilang, bikin baru pake gradle 8.5..."
+            gradle wrapper --gradle-version 8.5
+          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-ios-debug
