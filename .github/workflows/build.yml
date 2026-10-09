@@ -5,8 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Buat folder icon otomatis
+      - name: Benerin folder & icon
         run: |
+          mv Gradle gradle 2>/dev/null || true
           mkdir -p app/src/main/res/mipmap-mdpi
           mkdir -p app/src/main/res/mipmap-hdpi
           mkdir -p app/src/main/res/mipmap-xhdpi
@@ -26,9 +27,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v3
-      - name: Build APK tanpa gradlew
-        run: gradle assembleDebug
+        with:
+          gradle-version: 8.5
+      - run: gradle assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-APK-FINAL
