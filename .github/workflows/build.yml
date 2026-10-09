@@ -10,17 +10,24 @@ jobs:
           mv Gradle gradle 2>/dev/null || true
           rm -rf app/src/main/res/mipmap-anydpi-v26
           mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
-          cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || cp icon.jpg app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
-          for d in hdpi xhdpi xxhdpi xxxhdpi; do cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher.png; cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-$d/ic_launcher_round.png; done
+          cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
           cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Build Debug APK
+      - name: Build
         run: |
           chmod +x gradlew
-         ./gradlew assembleDebug --no-daemon
+         ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-APK-FINAL
