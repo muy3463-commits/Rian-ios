@@ -5,12 +5,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix icon
+      - name: Benerin folder & icon
         run: |
           mv Gradle gradle 2>/dev/null || true
           rm -rf app/src/main/res/mipmap-anydpi-v26
+          sudo apt-get update && sudo apt-get install -y imagemagick
           mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
-          cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+          convert icon.png -resize 1024x1024 PNG32:app/src/main/res/mipmap-mdpi/ic_launcher.png || cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png
           cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png
           cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
@@ -24,10 +25,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Build
-        run: |
-          chmod +x gradlew
-         ./gradlew assembleDebug
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+      - run: gradle assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-APK-FINAL
