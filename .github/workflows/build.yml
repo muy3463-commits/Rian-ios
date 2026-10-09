@@ -11,9 +11,14 @@ jobs:
           python3 << 'PY'
           from PIL import Image
           import os, shutil
-          src="icon.png"
-          if not os.path.exists(src):
-              print("icon.png not found!"); exit(1)
+          src=None
+          for n in ["icon.png","icon.webp","icon.jpg"]:
+              if os.path.exists(n):
+                  src=n
+                  break
+          if not src:
+              print("no icon"); exit(1)
+          print(f"Using {src}")
           base="app/src/main/res"
           for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
               if os.path.exists(p): shutil.rmtree(p)
@@ -23,17 +28,15 @@ jobs:
               r=im.resize((sz,sz), Image.LANCZOS)
               r.save(f"{base}/mipmap-{dn}/ic_launcher.png")
               r.save(f"{base}/mipmap-{dn}/ic_launcher_round.png")
-              print(f"made {dn}")
           PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v3
-      - name: Build
+      - name: Build Debug APK
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          if [ -f gradlew ]; then chmod +x gradlew && ./gradlew assembleDebug --no-daemon; else gradle assembleDebug --no-daemon; fi
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-ios-debug
