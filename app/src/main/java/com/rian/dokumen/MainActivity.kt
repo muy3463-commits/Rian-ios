@@ -44,13 +44,18 @@ fun App() {
     var pin by remember { mutableStateOf("") }
     var login by remember { mutableStateOf(false) }
     var folder by remember { mutableStateOf<String?>(null) }
+    var bukaFile by remember { mutableStateOf<File?>(null) }
     val vault = File(ctx.filesDir, "vault").apply { if (!exists()) mkdirs() }
     var refresh by remember { mutableStateOf(0) }
+
+    val bgBlack = Color(0xFF0A0A0F)
+    val cardDark = Color(0xFF1E1E24)
+    val gold = Color(0xFFD4AF37)
 
     fun exportFile(f: File) {
         try {
             val ext = f.extension.lowercase()
-            val isImg = ext == "jpg" || ext == "jpeg" || ext == "png"
+            val isImg = ext in listOf("jpg","jpeg","png")
             val isVid = ext == "mp4"
             val coll = if (isImg) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else if (isVid) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
             val rel = if (isImg) Environment.DIRECTORY_PICTURES + "/RianDokumen" else if (isVid) Environment.DIRECTORY_MOVIES + "/RianDokumen" else Environment.DIRECTORY_DOWNLOADS + "/RianDokumen"
@@ -58,8 +63,8 @@ fun App() {
             cv.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
             cv.put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
             val uri = ctx.contentResolver.insert(coll, cv)
-            uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> f.inputStream().use { i -> i.copyTo(o) } }; Toast.makeText(ctx, "Export OK", Toast.LENGTH_SHORT).show() }
-        } catch (e: Exception) { Toast.makeText(ctx, e.message, Toast.LENGTH_LONG).show() }
+            uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> f.inputStream().use { i -> i.copyTo(o) } }; Toast.makeText(ctx, "Export OK: ${f.name}", Toast.LENGTH_SHORT).show() }
+        } catch (e: Exception) { Toast.makeText(ctx, "Gagal: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
@@ -67,31 +72,49 @@ fun App() {
             try {
                 val dir = File(vault, folder!!).apply { if (!exists()) mkdirs() }
                 val ext = when (folder) {
-                    "Photos" -> "jpg"
-                    "Videos" -> "mp4"
-                    "PDF" -> "pdf"
-                    "XLSX" -> "xlsx"
-                    "Secure" -> "dat"
-                    else -> "docx"
+                    "Photos" -> "jpg"; "Videos" -> "mp4"; "PDF" -> "pdf"; "XLSX" -> "xlsx"; "Secure" -> "dat"; else -> "docx"
                 }
-                val dest = File(dir, System.currentTimeMillis().toString() + "." + ext)
+                val dest = File(dir, "${System.currentTimeMillis()}.$ext")
                 ctx.contentResolver.openInputStream(u)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } }
+                Toast.makeText(ctx, "Berhasil", Toast.LENGTH_SHORT).show()
                 refresh++
             } catch (e: Exception) { Toast.makeText(ctx, e.message, Toast.LENGTH_LONG).show() }
         }
     }
 
+    // DIALOG BUKA FILE
+    if (bukaFile != null) {
+        AlertDialog(
+            onDismissRequest = { bukaFile = null },
+            containerColor = cardDark,
+            titleContentColor = Color.White,
+            textContentColor = Color.Gray,
+            title = { Text("📂 ${bukaFile!!.name}", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("${bukaFile!!.length()/1024} KB • Terenkripsi", color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    Text("File aman di Private Vault. Klik Export untuk membuka di aplikasi lain.", color = Color.LightGray, fontSize = 13.sp)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { exportFile(bukaFile!!); bukaFile = null }, colors = ButtonDefaults.buttonColors(containerColor = gold)) { Text("Export & Buka", color = Color.Black, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { bukaFile = null }) { Text("Tutup", color = Color.White) } }
+        )
+    }
+
     if (!login) {
-        Box(Modifier.fillMaxSize().background(Color(0xFFF8F7FB)), contentAlignment = Alignment.Center) {
-            Card(Modifier.fillMaxWidth().padding(20.dp).shadow(20.dp, RoundedCornerShape(32.dp)), shape = RoundedCornerShape(32.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Box(Modifier.fillMaxSize().background(bgBlack), contentAlignment = Alignment.Center) {
+            Card(Modifier.fillMaxWidth().padding(24.dp).shadow(24.dp, RoundedCornerShape(32.dp)), shape = RoundedCornerShape(32.dp), colors = CardDefaults.cardColors(containerColor = cardDark)) {
                 Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(72.dp).background(Color(0xFF111111), CircleShape), contentAlignment = Alignment.Center) { Text("🔐", fontSize = 34.sp) }
+                    Box(Modifier.size(72.dp).background(Color.White, CircleShape), contentAlignment = Alignment.Center) { Text("🔐", fontSize = 34.sp) }
                     Spacer(Modifier.height(16.dp))
-                    Text("Rian Dokumen", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Text("PREMIUM • Private Vault", fontSize = 12.sp, color = Color(0xFF8E8E93))
+                    Text("Vault", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Your secure files • End-to-end encrypted", fontSize = 12.sp, color = Color.Gray)
                     Spacer(Modifier.height(28.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        for (i in 0 until 6) { Box(Modifier.size(14.dp).background(if (i < pin.length) Color(0xFF111111) else Color(0xFFE5E5EA), CircleShape)) }
+                        for (i in 0 until 6) { Box(Modifier.size(14.dp).background(if (i < pin.length) Color.White else Color(0xFF3A3A3C), CircleShape)) }
                     }
                     Spacer(Modifier.height(32.dp))
                     val keys = listOf("1","2","3","4","5","6","7","8","9","","0","⌫")
@@ -99,10 +122,10 @@ fun App() {
                         items(keys) { k ->
                             if (k == "") { Box(Modifier.size(76.dp)) }
                             else {
-                                Box(Modifier.size(76.dp).background(Color(0xFFF2F2F7), CircleShape).clickable {
+                                Box(Modifier.size(76.dp).background(Color(0xFF2C2C2E), CircleShape).clickable {
                                     if (k == "⌫") { if (pin.isNotEmpty()) pin = pin.dropLast(1) }
                                     else { if (pin.length < 6) pin += k; if (pin.length == 6) { if (pin == "123456") login = true else { Toast.makeText(ctx, "PIN Salah", Toast.LENGTH_SHORT).show(); pin = "" } } }
-                                }, contentAlignment = Alignment.Center) { Text(k, fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+                                }, contentAlignment = Alignment.Center) { Text(k, fontSize = 24.sp, color = Color.White, fontWeight = FontWeight.Medium) }
                             }
                         }
                     }
@@ -113,21 +136,37 @@ fun App() {
     }
 
     if (folder == null) {
-        Column(Modifier.fillMaxSize().background(Color(0xFFF8F7FB)).padding(20.dp)) {
+        Column(Modifier.fillMaxSize().background(bgBlack).padding(20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column { Text("Rian Dokumen", fontSize = 30.sp, fontWeight = FontWeight.Bold); Text("PREMIUM EDITION", fontSize = 11.sp, color = Color(0xFF8E8E93), fontWeight = FontWeight.Bold) }
-                Box(Modifier.background(Color(0xFF111111), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) { Text("PRO", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                Column {
+                    Text("Vault", fontSize = 44.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Your secure files • End-to-end encrypted", fontSize = 13.sp, color = Color.Gray)
+                }
+                Box(Modifier.background(gold, RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 6.dp)) { Text("PRO", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold) }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
+            val itemsList = listOf(
+                Triple("Docx", "Docx" to Color(0xFF0A84FF)),
+                Triple("XLSX", "XLSX" to Color(0xFF30D158)),
+                Triple("PDF", "PDF" to Color(0xFFFF3B30)),
+                Triple("Photos", "Photos" to Color(0xFFAF52DE)),
+                Triple("Videos", "Videos" to Color(0xFFFF2D55)),
+                Triple("Secure", "Secure" to Color(0xFF5AC8FA))
+            )
             LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(listOf(Triple("Docx","📄",Color(0xFF007AFF)),Triple("XLSX","📊",Color(0xFF34C759)),Triple("PDF","📕",Color(0xFFFF3B30)),Triple("Photos","🖼️",Color(0xFFFF9500)),Triple("Videos","🎬",Color(0xFFAF52DE)),Triple("Secure","🔒",Color(0xFF111111)))) { (name, icon, col) ->
+                items(itemsList) { (name, pair) ->
+                    val (label, col) = pair
                     val count = File(vault, name).listFiles()?.size ?: 0
-                    Card(Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(28.dp)).clickable { folder = name }, shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    val countText = if (name == "Photos") "$count items" else if (name == "Secure") "Vault locked" else "$count files"
+                    val iconText = when(name) { "Docx" -> "📄"; "XLSX" -> "📊"; "PDF" -> "PDF"; "Photos" -> "🖼️"; "Videos" -> "▶️"; else -> "🛡️" }
+                    Card(Modifier.fillMaxWidth().shadow(0.dp, RoundedCornerShape(24.dp)).clickable { folder = name }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = cardDark)) {
                         Column(Modifier.padding(20.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(Modifier.size(56.dp).background(col.copy(alpha = 0.12f), CircleShape), contentAlignment = Alignment.Center) { Text(icon, fontSize = 28.sp) }
+                            Box(Modifier.size(56.dp).background(col, CircleShape), contentAlignment = Alignment.Center) {
+                                Text(iconText, fontSize = if (name=="PDF") 14.sp else 24.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
                             Spacer(Modifier.height(12.dp))
-                            Text(name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                            Text("$count files", fontSize = 11.sp, color = Color(0xFF8E8E93))
+                            Text(name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color.White)
+                            Text(countText, fontSize = 12.sp, color = Color(0xFF8E8E93))
                         }
                     }
                 }
@@ -135,41 +174,4 @@ fun App() {
         }
     } else {
         val dir = File(vault, folder!!)
-        val files = remember(refresh, folder) { dir.listFiles()?.toList()?.sortedByDescending { it.lastModified() } ?: emptyList() }
-        Column(Modifier.fillMaxSize().background(Color(0xFFF8F7FB)).padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.background(Color.White, CircleShape).shadow(2.dp, CircleShape).clickable { folder = null }.padding(horizontal = 16.dp, vertical = 10.dp)) { Text("‹ Back", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
-                Spacer(Modifier.width(14.dp))
-                Column { Text(folder!!, fontWeight = FontWeight.Bold, fontSize = 20.sp); Text("${files.size} files • Filter ON", fontSize = 12.sp, color = Color(0xFF8E8E93)) }
-            }
-            Spacer(Modifier.height(20.dp))
-            Button(onClick = { pick.launch("*/*") }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF111111))) { Text("+ Tambah ke $folder", fontWeight = FontWeight.Bold) }
-            Spacer(Modifier.height(16.dp))
-            if (files.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Kosong • Klik + untuk tambah", color = Color.Gray) }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(files) { f ->
-                        Card(Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                            Column(Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(Modifier.size(48.dp).background(Color(0xFFF2F2F7), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                                        Text(if (folder == "Docx") "📄" else if (folder == "XLSX") "📊" else if (folder == "PDF") "📕" else if (folder == "Photos") "🖼️" else if (folder == "Videos") "🎬" else "🔒", fontSize = 22.sp)
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f)) { Text(f.name, fontWeight = FontWeight.SemiBold, maxLines = 1, fontSize = 14.sp); Text("${f.length()/1024} KB • Aman", fontSize = 11.sp, color = Color(0xFF8E8E93)) }
-                                }
-                                Spacer(Modifier.height(14.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = { Toast.makeText(ctx, "File aman: ${f.name}", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF111111))) { Text("Info") }
-                                    Button(onClick = { exportFile(f) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("Export") }
-                                    OutlinedButton(onClick = { f.delete(); refresh++ }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) { Text("Hapus") }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+        val files = remember(refresh, folder) { dir.listFiles()?.toList()?.sortedByDescending { it.lastModified()
