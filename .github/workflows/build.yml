@@ -5,30 +5,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix icon total
+      - name: Fix icon paksa
         run: |
-          echo "CARI ICON..."
-          find. -name "icon.png" -o -name "ic_launcher.png" | head -20
-          ICON=$(find. -maxdepth 3 -name "icon.png" -o -name "logo.png" -o -name "app_icon.png" | head -1)
-          if [ -z "$ICON" ]; then ICON="./icon.png"; fi
-          echo "Pakai icon: $ICON"
           mv Gradle gradle 2>/dev/null || true
           rm -rf app/src/main/res/mipmap-anydpi-v26
           rm -f app/src/main/res/mipmap-*/ic_launcher*.xml
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p app/src/main/res/mipmap-$d
-            cp "$ICON" app/src/main/res/mipmap-$d/ic_launcher.png
-            cp "$ICON" app/src/main/res/mipmap-$d/ic_launcher_round.png
-          done
-          ls -lh app/src/main/res/mipmap-mdpi/
+          ls -l icon.png
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p app/src/main/res/mipmap-$d; cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher.png; cp -f icon.png app/src/main/res/mipmap-$d/ic_launcher_round.png; done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Build
-        run: |
-          chmod +x gradlew
-         ./gradlew assembleDebug
+      - run: chmod +x gradlew
+      - run:./gradlew clean assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-APK-FINAL
