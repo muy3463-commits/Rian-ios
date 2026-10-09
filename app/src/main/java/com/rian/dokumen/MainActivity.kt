@@ -9,13 +9,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -55,14 +58,21 @@ fun App() {
             cv.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
             cv.put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
             val uri = ctx.contentResolver.insert(coll, cv)
-            uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> f.inputStream().use { i -> i.copyTo(o) } }; Toast.makeText(ctx, "Export OK ke " + rel, Toast.LENGTH_SHORT).show() }
+            uri?.let { ctx.contentResolver.openOutputStream(it)?.use { o -> f.inputStream().use { i -> i.copyTo(o) } }; Toast.makeText(ctx, "Export OK", Toast.LENGTH_SHORT).show() }
         } catch (e: Exception) { Toast.makeText(ctx, e.message, Toast.LENGTH_LONG).show() }
     }
 
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
         if (u != null && folder != null) {
             val dir = File(vault, folder!!).apply { if (!exists()) mkdirs() }
-            val ext = if (folder == "Photos") "jpg" else if (folder == "Videos") "mp4" else if (folder == "Pdf") "pdf" else "docx"
+            val ext = when (folder) {
+                "Photos" -> "jpg"
+                "Videos" -> "mp4"
+                "PDF" -> "pdf"
+                "XLSX" -> "xlsx"
+                "Secure" -> "dat"
+                else -> "docx"
+            }
             val dest = File(dir, System.currentTimeMillis().toString() + "." + ext)
             ctx.contentResolver.openInputStream(u)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } }
             refresh++
@@ -70,15 +80,35 @@ fun App() {
     }
 
     if (!login) {
-        Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Card(shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(8.dp)) {
-                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Rian Dokumen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("Vault Aman", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                    Spacer(Modifier.height(20.dp))
-                    OutlinedTextField(value = pin, onValueChange = { pin = it }, label = { Text("PIN 123456") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Button(onClick = { if (pin == "123456") login = true else Toast.makeText(ctx, "PIN salah!", Toast.LENGTH_SHORT).show() }, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp)) { Text("Masuk", fontWeight = FontWeight.Bold) }
+        // iOS PIN STYLE - GA KELIATAN PIN NYA
+        Column(Modifier.fillMaxSize().background(Color(0xFFF2F0F7)).padding(16.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Card(shape = RoundedCornerShape(32.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Rian Dokumen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("Private Vault • iOS Style", fontSize = 13.sp, color = Color.Gray)
+                    Spacer(Modifier.height(24.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        for (i in 0 until 6) {
+                            Box(Modifier.size(16.dp).background(if (i < pin.length) Color.Black else Color(0xFFE0DDE5), CircleShape))
+                        }
+                    }
+                    Spacer(Modifier.height(28.dp))
+                    // Keypad 1-9 0 X
+                    val keys = listOf("1","2","3","4","5","6","7","8","9","","0","x")
+                    LazyVerticalGrid(columns = GridCells.Fixed(3), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        items(keys) { k ->
+                            if (k == "") {
+                                Box(Modifier.size(80.dp))
+                            } else {
+                                Box(Modifier.size(80.dp).background(Color(0xFFF2F0F7), CircleShape).clickable {
+                                    if (k == "x") { if (pin.isNotEmpty()) pin = pin.dropLast(1) }
+                                    else { if (pin.length < 6) pin += k; if (pin.length == 6) { if (pin == "123456") login = true else { Toast.makeText(ctx, "PIN salah!", Toast.LENGTH_SHORT).show(); pin = "" } } }
+                                }, contentAlignment = Alignment.Center) {
+                                    Text(k, fontSize = 26.sp, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -86,18 +116,17 @@ fun App() {
     }
 
     if (folder == null) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Text("Vault Kamu", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Pilih folder", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            Spacer(Modifier.height(16.dp))
-            LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(listOf("Docx", "Pdf", "Photos", "Videos")) { n ->
-                    val icon = if (n == "Photos") "🖼️" else if (n == "Videos") "🎬" else if (n == "Pdf") "📕" else "📄"
-                    Card(Modifier.clickable { folder = n }, shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-                        Column(Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(icon, style = MaterialTheme.typography.headlineLarge)
-                            Spacer(Modifier.height(8.dp))
-                            Text(n, fontWeight = FontWeight.Bold)
+        Column(Modifier.fillMaxSize().background(Color(0xFFF2F0F7)).padding(16.dp)) {
+            Text("Rian Dokumen", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Offline • Docx Xlsx Pdf Foto Video", fontSize = 13.sp, color = Color.Gray)
+            Spacer(Modifier.height(20.dp))
+            LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(listOf("Docx" to "📄", "XLSX" to "📊", "PDF" to "📕", "Photos" to "🖼️", "Videos" to "🎬", "Secure" to "🔒")) { (name, icon) ->
+                    Card(Modifier.fillMaxWidth().clickable { folder = name }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+                        Column(Modifier.padding(22.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(icon, fontSize = 42.sp)
+                            Spacer(Modifier.height(10.dp))
+                            Text(name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                         }
                     }
                 }
@@ -106,21 +135,21 @@ fun App() {
     } else {
         val dir = File(vault, folder!!)
         val files = remember(refresh, folder) { dir.listFiles()?.toList() ?: emptyList() }
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Column(Modifier.fillMaxSize().background(Color(0xFFF2F0F7)).padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = { folder = null }, shape = RoundedCornerShape(10.dp)) { Text("< Back") }
                 Spacer(Modifier.width(12.dp))
-                Column { Text(folder!!, fontWeight = FontWeight.Bold); Text(files.size.toString() + " file", style = MaterialTheme.typography.bodySmall) }
+                Column { Text(folder!!, fontWeight = FontWeight.Bold, fontSize = 18.sp); Text(files.size.toString() + " file", fontSize = 12.sp, color = Color.Gray) }
             }
             Spacer(Modifier.height(16.dp))
-            Button(onClick = { pick.launch("*/*") }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)) { Text("+ Tambah File ke " + folder!!) }
+            Button(onClick = { pick.launch("*/*") }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)) { Text("+ Tambah File") }
             Spacer(Modifier.height(16.dp))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(files) { f ->
-                    ElevatedCard(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.padding(14.dp)) {
                             Text(f.name, fontWeight = FontWeight.Medium, maxLines = 1)
-                            Text((f.length() / 1024).toString() + " KB", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            Text((f.length() / 1024).toString() + " KB", fontSize = 12.sp, color = Color.Gray)
                             Spacer(Modifier.height(10.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = {
