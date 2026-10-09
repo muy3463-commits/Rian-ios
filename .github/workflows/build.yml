@@ -5,17 +5,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: MAKE ICON FROM PHOTO
+        with:
+          fetch-depth: 0
+      - name: RESTORE GRADLEW
+        run: |
+          for c in $(git log --all --pretty=format:%H -- gradlew | head -5); do git checkout $c -- gradlew gradle/wrapper/ 2>/dev/null && break; done
+          chmod +x gradlew || true
+      - name: MAKE ICON RIAN APK
         run: |
           pip install pillow -q
           python3 << 'PY'
           from PIL import Image
           import os, shutil
-          src=None
-          for n in ["icon.png","icon.webp","icon.jpg"]:
-            if os.path.exists(n):
-              src=n; break
-          print(f"icon: {src}")
+          src="icon.png"
           base="app/src/main/res"
           for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
             if os.path.exists(p): shutil.rmtree(p)
@@ -31,14 +33,10 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v3
-      - name: RESTORE GRADLEW IF MISSING
-        run: |
-          if [ ! -f gradlew ]; then
-            echo "gradlew hilang, bikin baru..."
-            gradle wrapper --gradle-version 8.5
-          fi
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+        with:
+          gradle-version: 8.5
+      - name: Build APK
+        run: ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-ios-debug
