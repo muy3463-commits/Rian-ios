@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix icon & folder
+      - name: Fix icon
         run: |
           mv Gradle gradle 2>/dev/null || true
           rm -rf app/src/main/res/mipmap-anydpi-v26
@@ -17,8 +17,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: chmod +x gradlew
-      - run:./gradlew assembleDebug --no-daemon
+      - name: Build Debug APK
+        run: |
+          chmod +x gradlew
+         ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: Rian-APK-FINAL
