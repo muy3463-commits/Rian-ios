@@ -79,7 +79,6 @@ fun App() {
         }
     }
 
-    // === VIEWER INTERNAL ===
     if(viewingFile!=null){
         Box(Modifier.fillMaxSize().background(Color.Black)){
             val file = viewingFile!!
@@ -154,7 +153,6 @@ fun App() {
                             }
                             Spacer(Modifier.height(10.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                                // TOMBOL RAPIH
                                 FilledButton(onClick={
                                     if(f.extension.lowercase() in listOf("jpg","jpeg","png","webp","mp4","mkv","mov")) viewingFile=f
                                     else{
