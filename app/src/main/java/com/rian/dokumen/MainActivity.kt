@@ -56,20 +56,22 @@ fun App() {
     fun exportFile(f: File) {
         try {
             val ext = f.extension.lowercase()
-            val mime = if (ext == "jpg" || ext == "jpeg") "image/jpeg" else if (ext == "png") "image/png" else if (ext == "mp4") "video/mp4" else "application/octet-stream"
-            val collection = if (ext == "jpg" || ext == "jpeg" || ext == "png") MediaStore.Images.Media.EXTERNAL_CONTENT_URI else if (ext == "mp4") MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
-            val path = if (ext == "jpg" || ext == "jpeg" || ext == "png") Environment.DIRECTORY_PICTURES + "/RianDokumen" else if (ext == "mp4") Environment.DIRECTORY_MOVIES + "/RianDokumen" else Environment.DIRECTORY_DOWNLOADS + "/RianDokumen"
+            val isImage = ext == "jpg" || ext == "jpeg" || ext == "png"
+            val isVideo = ext == "mp4"
+            val mime = if (isImage) "image/jpeg" else if (isVideo) "video/mp4" else "application/octet-stream"
+            val coll = if (isImage) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            val rel = if (isImage) Environment.DIRECTORY_PICTURES + "/RianDokumen" else if (isVideo) Environment.DIRECTORY_MOVIES + "/RianDokumen" else Environment.DIRECTORY_DOWNLOADS + "/RianDokumen"
             val values = ContentValues()
             values.put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
             values.put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, path)
-            val uri = context.contentResolver.insert(collection, values)
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
+            val uri = context.contentResolver.insert(coll, values)
             if (uri != null) {
                 context.contentResolver.openOutputStream(uri)?.use { out -> f.inputStream().use { inp -> inp.copyTo(out) } }
                 Toast.makeText(context, "Export Berhasil!", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Gagal: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -82,7 +84,7 @@ fun App() {
             if (selectedFolder == "Videos") ext = "mp4"
             if (selectedFolder == "Pdf") ext = "pdf"
             val dest = File(folder, selectedFolder + "_" + System.currentTimeMillis() + "." + ext)
-            context.contentResolver.openInputStream(uri)?.use { input -> dest.outputStream().use { output -> input.copyTo(output) } }
+            context.contentResolver.openInputStream(uri)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } }
             refresh++
         }
     }
@@ -93,20 +95,18 @@ fun App() {
             val isImage = file.extension.lowercase() == "jpg" || file.extension.lowercase() == "jpeg" || file.extension.lowercase() == "png"
             if (isImage) {
                 val bmp = remember(file) { BitmapFactory.decodeFile(file.absolutePath) }
-                if (bmp != null) {
-                    Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize())
-                }
+                if (bmp != null) Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize())
             } else {
                 AndroidView(factory = { ctx -> VideoView(ctx).apply { setVideoURI(Uri.fromFile(file)); setOnPreparedListener { it.isLooping = true; start() } } }, modifier = Modifier.fillMaxSize())
             }
-            Button(onClick = { viewingFile = null }, modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) { Text("X Tutup") }
+            Button(onClick = { viewingFile = null }, modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) { Text("Tutup") }
         }
         return
     }
 
     if (!isLogin) {
         Column(modifier = Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth()) {
+            Card(shape = RoundedCornerShape(24.dp)) {
                 Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Rian Dokumen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -140,11 +140,31 @@ fun App() {
         val files = remember(refresh, selectedFolder) { folder.listFiles()?.toList() ?: emptyList() }
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { selectedFolder = null }) { Text("<") }
+                Button(onClick = { selectedFolder = null }) { Text("< Back") }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(selectedFolder!!, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(selectedFolder!!, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.weight(1f))
                 Text(files.size.toString() + " file", style = MaterialTheme.typography.bodySmall)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { picker.launch("*/*") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            Button(onClick = { picker.launch("*/*") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("+ Tambah File") }
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(files) { f ->
+                    ElevatedCard(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(f.name, fontWeight = FontWeight.Medium, maxLines = 1)
+                            Text((f.length() / 1024).toString() + " KB", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    val e = f.extension.lowercase()
+                                    if (e == "jpg" || e == "jpeg" || e == "png" || e == "mp4") viewingFile = f
+                                    else {
+                                        val u = FileProvider.getUriForFile(context, context.packageName + ".provider", f)
+                                        val i = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                        i.setDataAndType(u, "*/*")
+                                        i.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(android.content.Intent.createChooser(i, "Buka"))
+                                    }
+                                }, modifier = Modifier.weight(1f), shape = RoundedCorner
