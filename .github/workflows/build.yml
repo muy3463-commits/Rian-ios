@@ -5,36 +5,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: HAPUS TOTAL ROBOT - FIX ICON PERMANEN
+      - name: HAPUS TOTAL ROBOT - FIX ICON
         run: |
-          echo "=== CARI icon.png ==="
+          echo "CARI icon.png"
           find. -name "icon.png" -type f
           ICON_PATH=$(find. -name "icon.png" -type f | head -n1)
-          echo "Pakai icon: $ICON_PATH"
-
-          echo "=== HAPUS SEMUA ADAPTIVE ICON ROBOT ==="
+          echo "Pakai: $ICON_PATH"
           rm -rf app/src/main/res/mipmap-anydpi-v26
           rm -rf app/src/main/res/mipmap-anydpi-v33
           find app/src/main/res -name "ic_launcher*.xml" -delete
-          find app/src/main/res -name "ic_launcher_*.xml" -delete
-          find app/src/main/res -name "*launcher*foreground*" -delete
-          find app/src/main/res -name "*launcher*background*" -delete
-
-          echo "=== SISA FILE LAUNCHER (harus kosong xml) ==="
-          find app/src/main/res -name "*launch*"
-
-          echo "=== COPY ICON.PNG KE SEMUA MIPMAP ==="
+          echo "Sisa launcher:"
+          find app/src/main/res -name "*launch*" || echo "udah bersih"
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             mkdir -p app/src/main/res/mipmap-$d
             cp -fv $ICON_PATH app/src/main/res/mipmap-$d/ic_launcher.png
             cp -fv $ICON_PATH app/src/main/res/mipmap-$d/ic_launcher_round.png
-            cp -fv $ICON_PATH app/src/main/res/mipmap-$d/ic_launcher_foreground.png
-            ls -lh app/src/main/res/mipmap-$d/
           done
-
-          echo "=== VERIFIKASI AKHIR ==="
-          find app/src/main/res/mipmap-* -type f
-
+          ls app/src/main/res/mipmap-hdpi/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
