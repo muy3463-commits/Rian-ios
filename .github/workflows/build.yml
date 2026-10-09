@@ -1,27 +1,34 @@
 name: Build APK
-on: [push, workflow_dispatch]
+on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Pasang icon shield
+      - name: Buat folder icon otomatis
         run: |
-          pip install pillow -q
-          python3 -c "from PIL import Image;import os,shutil; b='app/src/main/res'; [shutil.rmtree(os.path.join(b,d)) for d in ['mipmap-anydpi-v26','mipmap-anydpi-v33'] if os.path.exists(os.path.join(b,d))]; im=Image.open('icon.png').convert('RGBA'); [(__import__('os').makedirs(os.path.join(b,f'mipmap-{k}'),exist_ok=True), Image.open('icon.png').convert('RGBA').resize((s,s),Image.LANCZOS).save(os.path.join(b,f'mipmap-{k}','ic_launcher.png')), Image.open('icon.png').convert('RGBA').resize((s,s),Image.LANCZOS).save(os.path.join(b,f'mipmap-{k}','ic_launcher_round.png'))) for k,s in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]]"
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp icon.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp icon.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp icon.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp icon.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp icon.png app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp icon.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp icon.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp icon.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp icon.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.5
-      - name: Build
-        run: |
-          if [ ! -f gradlew ]; then gradle wrapper --gradle-version 8.5; fi
-          chmod +x gradlew
-          ./gradlew assembleDebug
+      - run: chmod +x gradlew &&./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Rian-Dokumen-SHIELD-FINAL
+          name: Rian-APK-FINAL-TINGGAL-INSTALL
           path: app/build/outputs/apk/debug/app-debug.apk
