@@ -1,35 +1,40 @@
 name: Build APK
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - name: MAKE ICON FROM YOUR PHOTO
+        run: |
+          pip install pillow -q
+          python3 << 'PY'
+          from PIL import Image
+          import os, shutil
+          src="icon.png"
+          if not os.path.exists(src):
+              print("icon.png not found!"); exit(1)
+          base="app/src/main/res"
+          for p in [f"{base}/mipmap-anydpi-v26", f"{base}/mipmap-anydpi-v33"]:
+              if os.path.exists(p): shutil.rmtree(p)
+          im=Image.open(src).convert("RGBA")
+          for dn,sz in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
+              os.makedirs(f"{base}/mipmap-{dn}", exist_ok=True)
+              r=im.resize((sz,sz), Image.LANCZOS)
+              r.save(f"{base}/mipmap-{dn}/ic_launcher.png")
+              r.save(f"{base}/mipmap-{dn}/ic_launcher_round.png")
+              print(f"made {dn}")
+          PY
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.6
-
-      - name: Build APK
-        run: gradle assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v3
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
         with:
           name: Rian-ios-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
