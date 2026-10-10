@@ -32,7 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
-import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,11 +68,29 @@ fun App() {
         } catch (e: Exception) { Toast.makeText(ctx, e.message, Toast.LENGTH_LONG).show() }
     }
 
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
-        if (u!= null && folder!= null) {
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
+        if (u!= null) {
             try {
                 val dir = File(vault, folder!!).apply { if (!exists()) mkdirs() }
-                val ext = when (folder) { "Photos" -> "jpg"; "Videos" -> "mp4"; "PDF" -> "pdf"; "XLSX" -> "xlsx"; else -> "docx" }
+                File(dir, "${System.currentTimeMillis()}.jpg").also { dest -> ctx.contentResolver.openInputStream(u)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } } }
+                refresh++
+            } catch (e: Exception) {}
+        }
+    }
+    val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
+        if (u!= null) {
+            try {
+                val dir = File(vault, folder!!).apply { if (!exists()) mkdirs() }
+                File(dir, "${System.currentTimeMillis()}.mp4").also { dest -> ctx.contentResolver.openInputStream(u)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } } }
+                refresh++
+            } catch (e: Exception) {}
+        }
+    }
+    val pickDoc = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
+        if (u!= null) {
+            try {
+                val dir = File(vault, folder!!).apply { if (!exists()) mkdirs() }
+                val ext = when (folder) { "PDF" -> "pdf"; "XLSX" -> "xlsx"; else -> "docx" }
                 File(dir, "${System.currentTimeMillis()}.$ext").also { dest -> ctx.contentResolver.openInputStream(u)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } } }
                 refresh++
             } catch (e: Exception) {}
@@ -85,12 +102,10 @@ fun App() {
         val bmp = remember(f) { try { BitmapFactory.decodeFile(f.absolutePath) } catch(e: Exception){ null } }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             if (bmp!= null) Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().clickable { fullFile = null }, contentScale = ContentScale.Fit)
-            else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("File bukan foto", color = Color.White) }
-            Row(Modifier.fillMaxWidth().padding(top = 40.dp, start = 16.dp, end = 16.dp).align(Alignment.TopCenter), horizontalArrangement = Arrangement.SpaceBetween) {
-                Box(Modifier.background(Color(0x66000000), CircleShape).clickable { fullFile = null }.padding(horizontal = 16.dp, vertical = 8.dp)) { Text("✕ Tutup", color = Color.White, fontWeight = FontWeight.Bold) }
-                Box(Modifier.background(Color(0xFFD4AF37), RoundedCornerShape(20.dp)).clickable { exportFile(f) }.padding(horizontal = 16.dp, vertical = 8.dp)) { Text("Export", color = Color.Black, fontWeight = FontWeight.Bold) }
+            Row(Modifier.fillMaxWidth().padding(40.dp, 16.dp).align(Alignment.TopCenter), horizontalArrangement = Arrangement.SpaceBetween) {
+                Box(Modifier.background(Color(0x66000000), CircleShape).clickable { fullFile = null }.padding(12.dp, 8.dp)) { Text("✕", color = Color.White) }
+                Box(Modifier.background(Color(0xFFD4AF37), RoundedCornerShape(20.dp)).clickable { exportFile(f) }.padding(12.dp, 6.dp)) { Text("Export", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
             }
-            Text(f.name, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp).background(Color(0x66000000), RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White, fontSize = 11.sp)
         }
         return
     }
@@ -121,10 +136,7 @@ fun App() {
     if (folder == null) {
         Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0F)).padding(20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("Vault", color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Bold)
-                    Text("Your secure files • End-to-end encrypted", color = Color(0xFF8E8E93), fontSize = 12.sp)
-                }
+                Column { Text("Vault", color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Bold); Text("Your secure files • End-to-end encrypted", color = Color(0xFF8E8E93), fontSize = 12.sp) }
                 Box(Modifier.background(Color(0xFFD4AF37), RoundedCornerShape(20.dp)).padding(14.dp, 6.dp)) { Text("PRO", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
             }
             Spacer(Modifier.height(28.dp))
@@ -147,7 +159,9 @@ fun App() {
                     Box(Modifier.background(Color(0xFF222222), CircleShape).clickable { folder = null }.padding(14.dp, 8.dp)) { Text("‹ Back", color = Color.White) }
                     Spacer(Modifier.width(12.dp)); Text(folder!!, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 }
-                Box(Modifier.background(Color.White, RoundedCornerShape(20.dp)).clickable { pick.launch("*/*") }.padding(14.dp, 8.dp)) { Text("+ Tambah", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                Box(Modifier.background(Color.White, RoundedCornerShape(20.dp)).clickable {
+                    when(folder) { "Photos" -> pickImage.launch("image/*"); "Videos" -> pickVideo.launch("video/*"); else -> pickDoc.launch("*/*") }
+                }.padding(14.dp, 8.dp)) { Text("+ Tambah", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
             }
             if (isPhotos) {
                 Column {
